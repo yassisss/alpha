@@ -3,8 +3,21 @@ import fs from "fs";
 import path from "path";
 import { hashPassword, isPasswordHashed } from "@/lib/password";
 
-const MYSQL_URI = process.env.MYSQL_URL || "";
-const DB_NAME = process.env.MYSQL_DB_NAME || "alphateam";
+function getCleanMysqlUri(): string {
+  const raw = process.env.MYSQL_URL || process.env.DATABASE_URL || "";
+  if (!raw) return "";
+  const dbName = process.env.MYSQL_DB_NAME || "alphateam";
+  try {
+    const parsed = new URL(raw);
+    if (!parsed.pathname || parsed.pathname === "/" || parsed.pathname === "") {
+      parsed.pathname = `/${dbName}`;
+    }
+    return parsed.toString();
+  } catch {
+    if (raw.endsWith(`/${dbName}`)) return raw;
+    return raw.endsWith("/") ? `${raw}${dbName}` : `${raw}/${dbName}`;
+  }
+}
 
 declare global {
   // Prevent Next.js HMR from creating multiple MySQL pools and hitting "Too many connections"
@@ -161,13 +174,14 @@ export async function getDb() {
 }
 
 export async function getMysqlDb(): Promise<mysql.Pool | null> {
-  if (!MYSQL_URI) {
+  const connectionUri = getCleanMysqlUri();
+  if (!connectionUri) {
     return null;
   }
   try {
     if (!globalThis.__alphaMysqlPool) {
       globalThis.__alphaMysqlPool = mysql.createPool({
-        uri: `${MYSQL_URI}/${DB_NAME}`,
+        uri: connectionUri,
         waitForConnections: true,
         connectionLimit: 2,
         maxIdle: 1,
