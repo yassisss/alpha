@@ -79,7 +79,7 @@ export async function POST(req: Request) {
 
         // 2. Otherwise check `users` table (students)
         const [rows]: any = await mysqlDb.query(
-          `SELECT id, full_name, phone, parent_phone, grade, password, role, is_active, attendance_code, unlocked_courses, activated_at, created_at FROM users WHERE phone = ? LIMIT 1`,
+          `SELECT * FROM users WHERE phone = ? LIMIT 1`,
           [phone]
         );
         if (rows.length === 0) {
@@ -246,10 +246,17 @@ export async function POST(req: Request) {
         const attCode = userRows[0].attendance_code || generateAttendanceCode();
         const creatorAdmin = codeRow.created_by || "ADM_01";
         const activatedByLabel = `${creatorAdmin} (${normalizedCode})`;
-        await mysqlDb.query(
-          `UPDATE users SET is_active = 1, activated_at = NOW(), attendance_code = ?, activated_by = ?, unlocked_courses = ? WHERE phone = ?`,
-          [attCode, activatedByLabel, nextUnlockedCourses, phone]
-        );
+        try {
+          await mysqlDb.query(
+            `UPDATE users SET is_active = 1, activated_at = NOW(), attendance_code = ?, activated_by = ?, unlocked_courses = ? WHERE phone = ?`,
+            [attCode, activatedByLabel, nextUnlockedCourses, phone]
+          );
+        } catch {
+          await mysqlDb.query(
+            `UPDATE users SET is_active = 1, activated_at = NOW(), attendance_code = ?, activated_by = ? WHERE phone = ?`,
+            [attCode, activatedByLabel, phone]
+          );
+        }
         await mysqlDb.query(
           `UPDATE activation_codes SET is_used = ?, uses_count = ?, used_by_phone = ? WHERE id = ?`,
           [nextIsUsed, nextUsesCount, nextUsedByPhone, codeRow.id]
@@ -560,7 +567,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("Auth Error:", err);
     return NextResponse.json(
-      { error: "حدث خطأ في السيرفر، يرجى المحاولة مرة أخرى" },
+      { error: err?.message || "حدث خطأ في السيرفر، يرجى المحاولة مرة أخرى" },
       { status: 500 }
     );
   }

@@ -66,10 +66,17 @@ export async function POST(req: Request) {
       if (action === "toggle-user") {
         const { userId, isActive, adminCode } = body;
         if (isActive) {
-          await mysqlDb.query(
-            `UPDATE users SET is_active = 1, activated_at = COALESCE(activated_at, NOW()), activated_by = ?, unlocked_courses = COALESCE(unlocked_courses, 'ALL') WHERE id = ?`,
-            [adminCode || "ADM_1", userId]
-          );
+          try {
+            await mysqlDb.query(
+              `UPDATE users SET is_active = 1, activated_at = COALESCE(activated_at, NOW()), activated_by = ?, unlocked_courses = COALESCE(unlocked_courses, 'ALL') WHERE id = ?`,
+              [adminCode || "ADM_1", userId]
+            );
+          } catch {
+            await mysqlDb.query(
+              `UPDATE users SET is_active = 1, activated_at = COALESCE(activated_at, NOW()), activated_by = ? WHERE id = ?`,
+              [adminCode || "ADM_1", userId]
+            );
+          }
         } else {
           await mysqlDb.query(
             `UPDATE users SET is_active = 0 WHERE id = ?`,
