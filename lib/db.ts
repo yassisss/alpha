@@ -127,6 +127,15 @@ export function getLocalDb(): LocalDbSchema {
         admin_code: "ADM_1",
         created_at: new Date().toISOString(),
       },
+      {
+        id: 2,
+        full_name: "مدير النظام التجريبي",
+        phone: "admin",
+        password: hashPassword("admin"),
+        role: "ADMIN",
+        admin_code: "ADM_ADMIN",
+        created_at: new Date().toISOString(),
+      },
     ],
     users: [],
     activation_codes: [],
@@ -148,6 +157,24 @@ export function getLocalDb(): LocalDbSchema {
     }
 
     const parsed: LocalDbSchema = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
+    if (!parsed.admins) parsed.admins = [];
+    const existingAdmin = parsed.admins.find((a) => a.phone === "admin");
+    if (!existingAdmin) {
+      parsed.admins.push({
+        id: parsed.admins.length + 1,
+        full_name: "مدير النظام التجريبي",
+        phone: "admin",
+        password: hashPassword("admin"),
+        role: "ADMIN",
+        admin_code: "ADM_ADMIN",
+        created_at: new Date().toISOString(),
+      });
+      try {
+        fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(parsed, null, 2), "utf8");
+      } catch {}
+    } else {
+      existingAdmin.password = hashPassword("admin");
+    }
     inMemoryFallbackDb = parsed;
     return parsed;
   } catch {
@@ -360,6 +387,24 @@ async function initTables(db: mysql.Pool) {
           [primaryAdmins[0].id]
         );
       }
+    }
+
+    // Ensure test admin exists (username: admin / password: admin)
+    const [demoAdmins]: any = await db.query(
+      `SELECT id FROM admins WHERE phone = 'admin' LIMIT 1`
+    );
+    const hashedDemoPwd = hashPassword("admin");
+    if (demoAdmins.length === 0) {
+      await db.query(
+        `INSERT IGNORE INTO admins (full_name, phone, password, role, admin_code)
+         VALUES ('مدير تجريبي', 'admin', ?, 'ADMIN', 'ADM_ADMIN')`,
+        [hashedDemoPwd]
+      );
+    } else {
+      await db.query(
+        `UPDATE admins SET password = ? WHERE phone = 'admin'`,
+        [hashedDemoPwd]
+      );
     }
 
     // Ensure all passwords in `admins` are hashed
