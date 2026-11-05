@@ -292,7 +292,7 @@ export default function LoginPage() {
                   required
                   value={loginPhone}
                   onChange={(e) => setLoginPhone(e.target.value)}
-                  placeholder="010xxxxxxxx أو admin"
+                  placeholder="010xxxxxxxx"
                   className="w-full pr-10 pl-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-600 dark:focus:border-indigo-500 transition"
                 />
               </div>
@@ -365,7 +365,7 @@ export default function LoginPage() {
                   required
                   value={regPhone}
                   onChange={(e) => setRegPhone(e.target.value)}
-                  placeholder="010xxxxxxxx أو admin"
+                  placeholder="010xxxxxxxx"
                   className="w-full px-3.5 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-600 dark:focus:border-indigo-500 transition"
                 />
               </div>
