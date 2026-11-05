@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  font-family: 'Cairo', sans-serif;
+}
+
+/* Hide browser scrollbar while keeping smooth scrolling active */
+html,
+body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Hide Next.js Dev Error Toast / Overlay Portal */
+nextjs-portal {
+  display: none !important;
+}
+
+/* Modern Subtle Ambient & Dot Grid Background */
+.app-bg {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(at 50% 0%, rgba(79, 70, 229, 0.07) 0px, transparent 55%),
+    radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+.dark .app-bg {
+  background-color: #060913;
+  background-image: 
+    radial-gradient(at 50% 0%, rgba(79, 70, 229, 0.14) 0px, transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+/* Custom Text Selection Highlight */
+::selection {
+  background-color: #4f46e5;
+  color: #ffffff;
+}
+
+/* Slide-in & Slide-out Toast Notification Animations from Right */
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Smooth Theme Switch Transition */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+              color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* Theme Icon Spin/Pop Animation */
+@keyframes themeIconPop {
+  0% {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.animate-theme-icon {
+  animation: themeIconPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Profile Dropdown Menu Open & Close Animations */
+@keyframes dropdownIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdownOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.94);
+  }
+}
+
+.animate-dropdown-in {
+  transform-origin: top left;
+  animation: dropdownIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-dropdown-out {
+  transform-origin: top left;
+  animation: dropdownOut 0.18s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Smooth Shimmer Skeleton Effect */
+@keyframes shimmerWave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer-box {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 25%,
+    #f1f5f9 50%,
+    #e2e8f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s infinite linear;
+}
+
+.dark .shimmer-box {
+  background: linear-gradient(
+    90deg,
+    #1e293b 25%,
+    #334155 50%,
+    #1e293b 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmerWave 1.6s infinite linear;
+}
+
+/* Fix browser autofill & paste background color in Light Mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Fix browser autofill & paste background color in Dark Mode */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
