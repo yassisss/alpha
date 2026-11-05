@@ -14,7 +14,13 @@ declare global {
 }
 
 // Local JSON database fallback when remote MySQL host is offline
-const LOCAL_DB_PATH = path.join(process.cwd(), "data", "local-db.json");
+// In cloud/Vercel environments, only /tmp is writable; process.cwd() is read-only.
+const isVercel = Boolean(process.env.VERCEL);
+const LOCAL_DB_PATH = isVercel
+  ? path.join("/tmp", "local-db.json")
+  : path.join(process.cwd(), "data", "local-db.json");
+
+let inMemoryFallbackDb: LocalDbSchema | null = null;
 
 export interface LocalDbSchema {
   admins: Array<{
@@ -90,96 +96,69 @@ export function generateAttendanceCode(role: string = "STUDENT"): string {
 }
 
 export function getLocalDb(): LocalDbSchema {
-  const dir = path.dirname(LOCAL_DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  if (inMemoryFallbackDb) {
+    return inMemoryFallbackDb;
   }
-  if (!fs.existsSync(LOCAL_DB_PATH)) {
-    const initialData: LocalDbSchema = {
-      admins: [
-        {
-          id: 1,
-          full_name: "المدرس المسؤول",
-          phone: "01000000000",
-          password: hashPassword("admin123"),
-          role: "ADMIN",
-          admin_code: "ADM_1",
-          created_at: new Date().toISOString(),
-        },
-      ],
-      users: [],
-      activation_codes: [],
-    };
-    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2), "utf8");
-    return initialData;
-  }
-
-  const parsed: LocalDbSchema = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
-  let dirty = false;
-
-  if (!Array.isArray(parsed.admins)) {
-    parsed.admins = [];
-    dirty = true;
-  }
-
-  // Migrate any staff from local users to local admins
-  const staffInUsers = (parsed.users || []).filter(
-    (u) => u.role === "ADMIN" || u.role === "TEAM"
-  );
-  if (staffInUsers.length > 0) {
-    for (const s of staffInUsers) {
-      if (!parsed.admins.some((a) => a.phone === s.phone)) {
-        const nextCode =
-          s.phone === "01000000000"
-            ? "ADM_1"
-            : s.attendance_code?.startsWith("ADM_")
-            ? s.attendance_code
-            : `ADM_${parsed.admins.length + 1}`;
-        parsed.admins.push({
-          id: s.id,
-          full_name: s.full_name,
-          phone: s.phone,
-          password: isPasswordHashed(s.password)
-            ? s.password
-            : hashPassword(s.password),
-          role: s.role === "ADMIN" ? "ADMIN" : "TEAM",
-          admin_code: nextCode,
-          created_at: s.created_at || new Date().toISOString(),
-        });
-      }
+  try {
+    const dir = path.dirname(LOCAL_DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-    parsed.users = parsed.users.filter((u) => u.role === "STUDENT");
-    dirty = true;
-  }
+    if (!fs.existsSync(LOCAL_DB_PATH)) {
+      const initialData: LocalDbSchema = {
+        admins: [
+          {
+            id: 1,
+            full_name: "المدرس المسؤول",
+            phone: "01000000000",
+            password: hashPassword("admin123"),
+            role: "ADMIN",
+            admin_code: "ADM_1",
+            created_at: new Date().toISOString(),
+          },
+        ],
+        users: [],
+        activation_codes: [],
+      };
+      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2), "utf8");
+      inMemoryFallbackDb = initialData;
+      return initialData;
+    }
 
-  if (parsed.admins.length === 0) {
-    parsed.admins.push({
-      id: 1,
-      full_name: "المدرس المسؤول",
-      phone: "01000000000",
-      password: hashPassword("admin123"),
-      role: "ADMIN",
-      admin_code: "ADM_1",
-      created_at: new Date().toISOString(),
-    });
-    dirty = true;
+    const parsed: LocalDbSchema = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
+    inMemoryFallbackDb = parsed;
+    return parsed;
+  } catch {
+    if (!inMemoryFallbackDb) {
+      inMemoryFallbackDb = {
+        admins: [
+          {
+            id: 1,
+            full_name: "المدرس المسؤول",
+            phone: "01000000000",
+            password: hashPassword("admin123"),
+            role: "ADMIN",
+            admin_code: "ADM_1",
+            created_at: new Date().toISOString(),
+          },
+        ],
+        users: [],
+        activation_codes: [],
+      };
+    }
+    return inMemoryFallbackDb;
   }
-
-  if (parsed.activation_codes?.some((c) => c.code === "ALPHA-2026-FREE")) {
-    parsed.activation_codes = parsed.activation_codes.filter(
-      (c) => c.code !== "ALPHA-2026-FREE"
-    );
-    dirty = true;
-  }
-
-  if (dirty) {
-    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(parsed, null, 2), "utf8");
-  }
-  return parsed;
 }
 
 export function saveLocalDb(data: LocalDbSchema) {
-  fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2), "utf8");
+  inMemoryFallbackDb = data;
+  try {
+    const dir = path.dirname(LOCAL_DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2), "utf8");
+  } catch {}
 }
 
 export async function getDb() {
