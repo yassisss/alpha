@@ -14,9 +14,13 @@ declare global {
 }
 
 // Local JSON database fallback when remote MySQL host is offline
-// In cloud/Vercel environments, only /tmp is writable; process.cwd() is read-only.
-const isVercel = Boolean(process.env.VERCEL);
-const LOCAL_DB_PATH = isVercel
+// In cloud/Vercel serverless environments, file system outside /tmp is read-only
+const isServerless =
+  Boolean(process.env.VERCEL) ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  (typeof process.cwd === "function" && process.cwd().startsWith("/var/task"));
+
+const LOCAL_DB_PATH = isServerless
   ? path.join("/tmp", "local-db.json")
   : path.join(process.cwd(), "data", "local-db.json");
 
@@ -99,54 +103,43 @@ export function getLocalDb(): LocalDbSchema {
   if (inMemoryFallbackDb) {
     return inMemoryFallbackDb;
   }
+  const defaultData: LocalDbSchema = {
+    admins: [
+      {
+        id: 1,
+        full_name: "المدرس المسؤول",
+        phone: "01000000000",
+        password: hashPassword("admin123"),
+        role: "ADMIN",
+        admin_code: "ADM_1",
+        created_at: new Date().toISOString(),
+      },
+    ],
+    users: [],
+    activation_codes: [],
+  };
+
   try {
     const dir = path.dirname(LOCAL_DB_PATH);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch {}
     }
     if (!fs.existsSync(LOCAL_DB_PATH)) {
-      const initialData: LocalDbSchema = {
-        admins: [
-          {
-            id: 1,
-            full_name: "المدرس المسؤول",
-            phone: "01000000000",
-            password: hashPassword("admin123"),
-            role: "ADMIN",
-            admin_code: "ADM_1",
-            created_at: new Date().toISOString(),
-          },
-        ],
-        users: [],
-        activation_codes: [],
-      };
-      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2), "utf8");
-      inMemoryFallbackDb = initialData;
-      return initialData;
+      try {
+        fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(defaultData, null, 2), "utf8");
+      } catch {}
+      inMemoryFallbackDb = defaultData;
+      return defaultData;
     }
 
     const parsed: LocalDbSchema = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
     inMemoryFallbackDb = parsed;
     return parsed;
   } catch {
-    if (!inMemoryFallbackDb) {
-      inMemoryFallbackDb = {
-        admins: [
-          {
-            id: 1,
-            full_name: "المدرس المسؤول",
-            phone: "01000000000",
-            password: hashPassword("admin123"),
-            role: "ADMIN",
-            admin_code: "ADM_1",
-            created_at: new Date().toISOString(),
-          },
-        ],
-        users: [],
-        activation_codes: [],
-      };
-    }
-    return inMemoryFallbackDb;
+    inMemoryFallbackDb = defaultData;
+    return defaultData;
   }
 }
 
@@ -155,7 +148,9 @@ export function saveLocalDb(data: LocalDbSchema) {
   try {
     const dir = path.dirname(LOCAL_DB_PATH);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch {}
     }
     fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2), "utf8");
   } catch {}
